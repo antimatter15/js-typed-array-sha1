@@ -1,0 +1,122 @@
+<input type="file" onchange="selected(this.files)">
+<script>
+function selected(files){
+  calculate(files[0]);
+  //worker = new Worker('worker.js');
+  //worker.onmessage = function(e){
+  //  console.log(e.data, e)
+  //}
+  //worker.postMessage(files[0]);
+
+}
+
+var H = new Uint32Array(5);
+var K = new Uint32Array(4);
+var W = new Uint32Array(80);
+var blocks;
+
+
+function initialize(len){
+  K[0] = 0x5a827999; //though these are constants
+  K[1] = 0x6ed9eba1;
+  K[2] = 0x8f1bbcdc;
+  K[3] = 0xca62c1d6;
+
+	H[0] = 0x67452301;
+	H[1] = 0xefcdab89;
+	H[2] = 0x98badcfe;
+	H[3] = 0x10325476;
+	H[4] = 0xc3d2e1f0;
+  
+
+}
+
+
+
+function rol32(word, shift){
+  return (word << shift) | (word >> (32 - shift));
+}
+
+function f1(x,y,z){ return  (z ^ (x & (y ^ z)))	}
+function f2(x,y,z){return (x ^ y ^ z)	}
+function f3(x,y,z){return ((x & y) + (z & (x ^ y)))}
+
+function sha_transform(){
+  //from 0-16 set W[i]
+  //from 0-64
+  var i;
+  for(i = 0; i < 64; i++){
+    W[i+16] = rol32(W[i+13] ^ W[i+8] ^ W[i+2] ^ W[i], 1);
+  }
+  var Z = new Uint32Array(6);
+  Z[1] = H[0]; Z[2] = H[1]; Z[3] = H[2]; Z[4] = H[3]; Z[5] = H[4];
+  
+	for (i = 0; i < 20; i++) {
+		Z[0] = f1(Z[2], Z[3], Z[4]) + K[0] + rol32(Z[1], 5) + Z[5] + W[i];
+		Z[5] = Z[4]; Z[4] = Z[3]; Z[3] = rol32(Z[2], 30); Z[2] = Z[1]; Z[1] = Z[0];
+	}
+
+	for (; i < 40; i ++) {
+		Z[0] = f2(Z[2], Z[3], Z[4]) + K[1] + rol32(Z[1], 5) + Z[5] + W[i];
+		Z[5] = Z[4]; Z[4] = Z[3]; Z[3] = rol32(Z[2], 30); Z[2] = Z[1]; Z[1] = Z[0];
+	}
+
+	for (; i < 60; i ++) {
+		Z[0] = f3(Z[2], Z[3], Z[4]) + K[2] + rol32(Z[1], 5) + Z[5] + W[i];
+		Z[5] = Z[4]; Z[4] = Z[3]; Z[3] = rol32(Z[2], 30); Z[2] = Z[1]; Z[1] = Z[0];
+	}
+
+	for (; i < 80; i ++) {
+		Z[0] = f2(Z[2], Z[3], Z[4]) + K[3] + rol32(Z[1], 5) + Z[5] + W[i];
+		Z[5] = Z[4]; Z[4] = Z[3]; Z[3] = rol32(Z[2], 30); Z[2] = Z[1]; Z[1] = Z[0];
+	}
+  H[0] += Z[1]
+  H[1] += Z[2]
+  H[2] += Z[3]
+  H[3] += Z[4]
+  H[4] += Z[5]
+  
+  
+  var out = new Uint8Array(H.buffer), hex = '';
+  for(var i = 0; i < out.length; i++){
+    hex += ('0'+out[i].toString(16)).slice(-2);
+  }
+  console.log(hex);
+  
+}
+
+function calculate(file){
+  initialize(file.size);
+  var fr = new FileReader();
+  var amount = 1024 * 1024;
+  
+  fr.onload = function(){
+    if(fr.result.byteLength < amount){
+      console.log("Final Blocks",fr.result.byteLength);
+      //var n = Math.ceil(((fr.result.byteLength+1)/4 + 2)/16);
+      var byteArray = new Uint8Array(Math.ceil(fr.result.byteLength/64) * 64);
+      byteArray.set(new Uint8Array(fr.result), 0);
+      byteArray[fr.result.byteLength] = 0x80;
+      byteArray[byteArray.length - 2] = file.size >>> 29;
+      byteArray[byteArray.length - 1] = (file.size<<3)&0x0ffffffff;
+      console.log(byteArray);
+      blocks = new Uint32Array(byteArray.buffer);
+    }else{
+      blocks = new Uint32Array(fr.result, 0);
+    }
+    /*
+    blocks = new Uint32Array(Math.ceil(sblocks.length / 4));
+    for(var i = 0; i < sblocks.length; i+=4){
+      blocks[i/4] = (sblocks[i]<<24) | (sblocks[i+1]<<16) | 
+        (sblocks[i+2]<<8) | (sblocks[i+3]);
+    }*/
+    console.log(blocks);
+    for(var n = 0; n < blocks.length; n+= 16){
+      W.set(blocks.subarray(n, n+16));
+      //update()
+      sha_transform();
+    }
+  }
+  fr.readAsArrayBuffer(file.webkitSlice(0, amount));
+}
+</script>
