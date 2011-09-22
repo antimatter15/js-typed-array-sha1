@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html manifest="cache.appcache">
 	<head>
 		<title>SHA1 Checksum Calculator</title>
 		<style>
@@ -8,9 +8,13 @@
 			font-family: sans-serif;
 			color:white;
 		}
-		
+		a {
+		  text-decoration: none;
+		  font-weight: bold;
+		  
+			color:#EDFAFF;
+		}
 		#floater {
-		
 			position: absolute;
 			top: 40%;
 			left: 50%;
@@ -142,8 +146,9 @@
 
 			<h1 >SHA1 <span style="color:gray">Checksum</span> Calculator</h1>
 			<p>
-				This is a simple <b>SHA1 checksumming utility</b>, written in <b>Javascript</b> using the File API, WebGL Typed Arrays, and Web Workers. It's <b>pretty fast</b> and can handle files <b>several gigabytes</b> large.
+				This is a simple <b>SHA1 checksumming utility</b> written in <b>Javascript</b> and uses the File API, Typed Arrays, and Web Workers. It's <b>pretty fast</b> and can handle files up to <b>several gigabytes</b>.
 			</p>
+			<div id="featdetect">
 			<p>
 				To begin, select <b>a file</b> (or <b>drag it here</b>).
 			</p>
@@ -154,9 +159,27 @@
 			<p>
 				<input type="file" onchange="selected(this.files[0])">
 			</p>
+			</div>
 			<progress id="progress" style="width:570px;position:absolute;bottom:12px;display:none" value=0></progress>
 		</div>
 		</div>
+		<footer style="position: absolute; bottom: 0; width: auto;padding: 20px;">
+		<b>Hello.</b> This app was made by <a href="http://twitter.com/antimatter15">@antimatter15</a> (or <a href="https://plus.google.com/116347431032639424492/about">Google+</a>). Read my <a href="http://antimatter15.com/wp/">Blog</a> for some other neat stuff. See how it works on <a href="https://github.com/antimatter15/js-typed-array-sha1">Github</a>.
+		</footer>
+		<script>
+		  (function(){
+		  try {
+		    var fr = new FileReader();
+        if(Worker && new Uint8Array && ArrayBuffer && fr.readAsArrayBuffer){
+          //yay
+        }else{
+          throw "boo";
+        }
+		  }catch(err){
+		    document.getElementById('featdetect').innerHTML = "It appears <b>your browser does not support all</b> the necessary features, it is known to work in recent versions of Chrome and Firefox.";
+		  }
+		  })();
+		</script>
 	</body>
 </html>
 
