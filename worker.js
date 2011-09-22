@@ -1,40 +1,29 @@
-<input type="file" onchange="selected(this.files)">
-<progress style="width:90%" id="progress"></progress>
-<div id="matrix"></div>
-<script>
-function selected(files){
-  calculate(files[0]);
-  //worker = new Worker('worker.js');
-  //worker.onmessage = function(e){
-  //  console.log(e.data, e)
-  //}
-  //worker.postMessage(files[0]);
-
-}
-
 var position = 0;
 
-function calculate(file){
+onmessage = function(e){
+  var file = e.data;
   initialize();
   position = 0;
   loadChunk(file);
 }
 
+var q = 0;
 
 function loadChunk(file){
   var fr = new FileReader();
-  var amount = 1024 * 128; //it has to be a multiple of 512 bits (a multiple of 64 bytes)
+  var amount = 1024 * 1024; //it has to be a multiple of 512 bits (a multiple of 64 bytes)
   
   var size = file.size;
-  
+  var realsize = Math.ceil((size/4 + 3)/16) * 16 * 4;
   fr.onload = function(){
-    if(fr.result.byteLength < amount){
+    var chunk = fr.result.byteLength;
+    if(chunk < amount){
       blocks = new Uint8Array(Math.ceil((fr.result.byteLength/4 + 3)/16) * 16 * 4);
       blocks.set(new Uint8Array(fr.result), 0);
       blocks[fr.result.byteLength] = 0x80;
       blocks = new Uint32Array(blocks.buffer);
 
-      for(var i = Math.ceil(fr.result.byteLength/4) + 1; i--;)
+      for(var i = Math.ceil(chunk/4) + 1; i--;)
         blocks[i] = endian_swap(blocks[i]);
       
       blocks[blocks.length - 2] = Math.floor(((size)*8) / Math.pow(2, 32));
@@ -47,16 +36,22 @@ function loadChunk(file){
     for(var n = 0; n < blocks.length; n+= 16){
       W.set(blocks.subarray(n, n+16));
       sha_transform();
+      var processed = position - amount + (n+16) * 4;
+      if(processed == realsize || q++ % 1547 == 0){
+        postMessage({hash: getHexValue(), processed: processed, total: realsize})
+      }
     }
-    document.getElementById('progress').value = position/file.size;
-    document.getElementById('matrix').innerHTML = toHexStr(H[0]) + toHexStr(H[1]) + toHexStr(H[2]) + toHexStr(H[3]) + toHexStr(H[4]);
     if(file.size > position) loadChunk(file);
   }
   fr.readAsArrayBuffer(file.webkitSlice(position, position+amount));
   position += amount;
 }
 
- 
+
+function getHexValue(){
+  return toHexStr(H[0]) + toHexStr(H[1]) + toHexStr(H[2]) + toHexStr(H[3]) + toHexStr(H[4]);
+}
+
 function endian_swap(x){
   return (
     (x>>>24) | 
@@ -95,7 +90,7 @@ function sha_transform(){
   }
   
   for (; t < 40; t ++) {
-    Z[0] = (rol32(Z[1],5) + f2(Z[2],Z[3],Z[4]) + Z[5] + K[1] + W[t]) ;
+    Z[0] = (rol32(Z[1],5) + (Z[2]^Z[3]^Z[4]) + Z[5] + K[1] + W[t]) ;
     Z[5] = Z[4];
     Z[4] = Z[3];
     Z[3] = rol32(Z[2], 30);
@@ -113,7 +108,7 @@ function sha_transform(){
   }
   
   for (; t < 80; t ++) {
-    Z[0] = (rol32(Z[1],5) + f2(Z[2],Z[3],Z[4]) + Z[5] + K[3] + W[t]) ;
+    Z[0] = (rol32(Z[1],5) + (Z[2]^Z[3]^Z[4]) + Z[5] + K[3] + W[t]) ;
     Z[5] = Z[4];
     Z[4] = Z[3];
     Z[3] = rol32(Z[2], 30);
@@ -153,5 +148,3 @@ toHexStr = function(n) {
   return s;
 }
 
-
-</script>

@@ -1,0 +1,31 @@
+<progress style="width:100%;margin-bottom:5px;" id="progress" value=0></progress>
+<input type="file" onchange="selected(this.files)">
+<span id="matrix" style="font-family: monospace"></span>
+
+<script>
+var p = 0;
+function selected(files){
+  var size = files[0].size;
+  worker = new Worker('worker.js');
+  lasttime = +new Date;
+  lastprocessed = 0;
+  worker.onmessage = function(e){
+    var time = +new Date;
+    var pct = e.data.processed/e.data.total;
+    document.getElementById('progress').value = pct;
+    document.getElementById('matrix').innerHTML = 'SHA1: ' + e.data.hash + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"+
+      e.data.processed+'/'+e.data.total+'&nbsp;&nbsp;&nbsp;&nbsp;'+
+      (pct*100).toFixed(2)+'%&nbsp;&nbsp;&nbsp;&nbsp;'+ 
+      (((e.data.processed - lastprocessed)/((time - lasttime)/1000))/1024/1024).toFixed(2) + 'MB/s';
+    lasttime = time;
+    lastprocessed = e.data.processed;
+    
+  }
+  worker.onerror = function(e){
+    console.log(e);
+  }
+  worker.postMessage(files[0]);
+}
+
+
+</script>
