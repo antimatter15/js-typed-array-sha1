@@ -1,51 +1,84 @@
 var position = 0;
+var size = 0;
+var q = 0;
+var amount = 1024 * 1024; //it has to be a multiple of 512 bits (a multiple of 64 bytes)
 
-onmessage = function(e){
-  var file = e.data;
-  initialize();
-  position = 0;
-  loadChunk(file);
+var is_little_endian = !!(new Uint8Array(new Uint32Array([1]).buffer)[0]);
+//Typed Arrays have the endianness of the system, SHA1 is big-endian but x86 is little-endian :(
+
+
+function fileSlice(file, start, length){
+  var end = length + start;
+  if(file.mozSlice){
+    return file.mozSlice(start, end);
+  }else if(file.webkitSlice){
+    return file.webkitSlice(start, end);
+  }
 }
 
-var q = 0;
+onmessage = function(e){
+  var d = e.data;
+  
+  if(d instanceof ArrayBuffer){ //its an array buffer!
+    processArrayBuffer(d, size);
+    if(size > position){
+      postMessage({action: 'requestChunk', amount: amount, position: position});
+      position += amount;
+    }
+  }else{
+    initialize();
+    position = 0;
+    size = d.size;
+    if(typeof FileReader == 'function'){
+      loadChunk(d.file);
+    }else{  //Firefox doesn't support FileReader inside WebWorkers
+      postMessage({action: 'requestChunk', position: position, amount: amount});
+      position += amount;
+    }
+  }
+}
 
 function loadChunk(file){
   var fr = new FileReader();
-  var amount = 1024 * 1024; //it has to be a multiple of 512 bits (a multiple of 64 bytes)
-  
-  var size = file.size;
-  var realsize = Math.ceil((size/4 + 3)/16) * 16 * 4;
   fr.onload = function(){
-    var chunk = fr.result.byteLength;
-    if(chunk < amount){
-      blocks = new Uint8Array(Math.ceil((fr.result.byteLength/4 + 3)/16) * 16 * 4);
-      blocks.set(new Uint8Array(fr.result), 0);
-      blocks[fr.result.byteLength] = 0x80;
-      blocks = new Uint32Array(blocks.buffer);
-
-      for(var i = Math.ceil(chunk/4) + 1; i--;)
-        blocks[i] = endian_swap(blocks[i]);
-      
-      blocks[blocks.length - 2] = Math.floor(((size)*8) / Math.pow(2, 32));
-      blocks[blocks.length - 1] = ((size)*8) & 0xffffffff;
-    }else{
-      blocks = new Uint32Array(fr.result);
-      for(var i = blocks.length;i--;)
-        blocks[i] = endian_swap(blocks[i]);
-    }
-    for(var n = 0; n < blocks.length; n+= 16){
-      W.set(blocks.subarray(n, n+16));
-      sha_transform();
-      var processed = position - amount + (n+16) * 4;
-      if(processed == realsize || q++ % 1547 == 0){
-        postMessage({hash: getHexValue(), processed: processed, total: realsize})
-      }
-    }
-    if(file.size > position) loadChunk(file);
+    processArrayBuffer(fr.result, size);
+    if(size > position) loadChunk(file);
   }
   
-  fr.readAsArrayBuffer(file.webkitSlice(position, position+amount));
+  fr.readAsArrayBuffer(fileSlice(file, position, amount));
   position += amount;
+}
+
+function processArrayBuffer(buffer, size){
+  var chunk = buffer.byteLength;
+  if(chunk < amount){
+    blocks = new Uint8Array(Math.ceil((buffer.byteLength/4 + 3)/16) * 16 * 4);
+    blocks.set(new Uint8Array(buffer), 0);
+    blocks[buffer.byteLength] = 0x80;
+    blocks = new Uint32Array(blocks.buffer);
+    if(is_little_endian)
+      for(var i = Math.ceil(chunk/4) + 1; i--;)
+        blocks[i] = endian_swap(blocks[i]);
+    
+    blocks[blocks.length - 2] = Math.floor(((size)*8) / Math.pow(2, 32));
+    blocks[blocks.length - 1] = ((size)*8) & 0xffffffff;
+  }else{
+    blocks = new Uint32Array(buffer);
+    if(is_little_endian)
+      for(var i = blocks.length;i--;)
+        blocks[i] = endian_swap(blocks[i]);
+  }
+  for(var n = 0; n < blocks.length; n+= 16){
+    W.set(blocks.subarray(n, n+16));
+    sha_transform();
+    if(new Date - q > 121){
+      var processed = position - amount + (n+16) * 4;
+      postMessage({hash: getHexValue(), processed: processed});
+      q = new Date;
+    }
+  }
+  var processed = position - amount + blocks.length * 4;
+  postMessage({hash: getHexValue(), processed: processed});
 }
 
 
@@ -123,7 +156,6 @@ function sha_transform(){
   H[3] += Z[4]
   H[4] += Z[5]
   
-  //console.log(toHexStr(H[0]) + toHexStr(H[1]) + toHexStr(H[2]) + toHexStr(H[3]) + toHexStr(H[4]));
 }
 
 

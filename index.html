@@ -4,27 +4,46 @@
 
 <script>
 var p = 0;
+function fileSlice(file, start, length){
+  var end = length + start;
+  if(file.mozSlice){
+    return file.mozSlice(start, end);
+  }else if(file.webkitSlice){
+    return file.webkitSlice(start, end);
+  }
+}
 function selected(files){
-  var size = files[0].size;
+  var file = files[0];
+  var size = file.size;
+  var realsize = Math.ceil((size/4 + 3)/16) * 16 * 4;
   worker = new Worker('worker.js');
   lasttime = +new Date;
   lastprocessed = 0;
   worker.onmessage = function(e){
-    var time = +new Date;
-    var pct = e.data.processed/e.data.total;
-    document.getElementById('progress').value = pct;
-    document.getElementById('matrix').innerHTML = 'SHA1: ' + e.data.hash + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"+
-      e.data.processed+'/'+e.data.total+'&nbsp;&nbsp;&nbsp;&nbsp;'+
-      (pct*100).toFixed(2)+'%&nbsp;&nbsp;&nbsp;&nbsp;'+ 
-      (((e.data.processed - lastprocessed)/((time - lasttime)/1000))/1024/1024).toFixed(2) + 'MB/s';
-    lasttime = time;
-    lastprocessed = e.data.processed;
-    
+    if(e.data.action == 'requestChunk'){
+      var fr = new FileReader();
+      fr.onload = function(){
+        worker.postMessage(fr.result);
+      }
+      fr.readAsArrayBuffer(fileSlice(file, e.data.position, e.data.amount));
+    }else{
+      var time = +new Date;
+      var pct = e.data.processed/realsize;
+      document.getElementById('progress').value = pct;
+      document.getElementById('matrix').innerHTML = 'SHA1: ' + e.data.hash + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"+
+        e.data.processed+'/'+realsize+'&nbsp;&nbsp;&nbsp;&nbsp;'+
+        (pct*100).toFixed(2)+'%&nbsp;&nbsp;&nbsp;&nbsp;'+ 
+        (((e.data.processed - lastprocessed)/((time - lasttime)/1000))/1024/1024).toFixed(2) + 'MB/s';
+      if(p++ % 14 == 0){
+        lasttime = time;
+        lastprocessed = e.data.processed;
+      }
+    }
   }
   worker.onerror = function(e){
     console.log(e);
   }
-  worker.postMessage(files[0]);
+  worker.postMessage({file: files[0], size: size});
 }
 
 
