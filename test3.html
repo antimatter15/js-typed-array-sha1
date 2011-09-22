@@ -1,4 +1,6 @@
 <input type="file" onchange="selected(this.files)">
+<progress style="width:90%" id="progress"></progress>
+<div id="matrix"></div>
 <script>
 function selected(files){
   calculate(files[0]);
@@ -21,7 +23,7 @@ function calculate(file){
 
 function loadChunk(file){
   var fr = new FileReader();
-  var amount = 1024; //it has to be a multiple of 512 bits (a multiple of 64 bytes)
+  var amount = 1024 * 128; //it has to be a multiple of 512 bits (a multiple of 64 bytes)
   
   var size = file.size;
   
@@ -46,6 +48,8 @@ function loadChunk(file){
       W.set(blocks.subarray(n, n+16));
       sha_transform();
     }
+    document.getElementById('progress').value = position/file.size;
+    document.getElementById('matrix').innerHTML = toHexStr(H[0]) + toHexStr(H[1]) + toHexStr(H[2]) + toHexStr(H[3]) + toHexStr(H[4]);
     if(file.size > position) loadChunk(file);
   }
   fr.readAsArrayBuffer(file.webkitSlice(position, position+amount));
