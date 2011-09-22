@@ -3,3 +3,5 @@ So far, this works with everything I've managed to throw at it.
 It's an implementation of SHA-1 in Javascript, using Typed Arrays and can process fairly large files (I tried it on a 3.9GB file, and it worked). On my computer it can process over 2MB/s, even though it isn't really heavily optimized.
 
 I don't really know what is bottlenecking performance, it may be the conversion between little endian (what typed arrays on x86 uses). In the future, it's probably a good idea to make this hardware-agnostic (which wouldn't be that hard, it just needs to do feature basic detection).
+
+It doesn't work in Firefox because they don't have a FileReader in Workers.

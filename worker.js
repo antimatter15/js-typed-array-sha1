@@ -43,6 +43,7 @@ function loadChunk(file){
     }
     if(file.size > position) loadChunk(file);
   }
+  
   fr.readAsArrayBuffer(file.webkitSlice(position, position+amount));
   position += amount;
 }
