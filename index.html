@@ -106,6 +106,7 @@
             var pct = e.data.processed/realsize;
             document.getElementById('progress').value = pct;
             document.getElementById('value').style.display = '';
+            document.getElementById('progress').style.display = '';
             document.getElementById('value').innerHTML = e.data.hash;
             document.getElementById('pct').innerHTML = (pct*100).toFixed(2)+'%';
             document.getElementById('speed').innerHTML = (((e.data.processed - lastprocessed)/((time - lasttime)/1000))/1024/1024).toFixed(2) + 'MB/s';
@@ -129,7 +130,7 @@
 				e.preventDefault();
 				e.stopPropagation();
 				var files = e.dataTransfer.files;
-				if(files.length > 0) selected(files);
+				if(files.length > 0) selected(files[0]);
 			}, false);
 
 		</script>
@@ -141,7 +142,7 @@
 
 			<h1 >SHA1 <span style="color:gray">Checksum</span> Calculator</h1>
 			<p>
-				This is a simple <b>SHA1 checksumming utility</b>, written in <b>Javascript</b> using the File API, WebGL Typed Arrays, and Web Workers. It's pretty fast and can handle files <b>several gigabytes</b> large.
+				This is a simple <b>SHA1 checksumming utility</b>, written in <b>Javascript</b> using the File API, WebGL Typed Arrays, and Web Workers. It's <b>pretty fast</b> and can handle files <b>several gigabytes</b> large.
 			</p>
 			<p>
 				To begin, select <b>a file</b> (or <b>drag it here</b>).
@@ -153,7 +154,7 @@
 			<p>
 				<input type="file" onchange="selected(this.files[0])">
 			</p>
-			<progress id="progress" style="width:570px;position:absolute;bottom:12px;" value=0></progress>
+			<progress id="progress" style="width:570px;position:absolute;bottom:12px;display:none" value=0></progress>
 		</div>
 		</div>
 	</body>
