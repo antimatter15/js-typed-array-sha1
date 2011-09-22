@@ -21,7 +21,7 @@ function calculate(file){
 
 function loadChunk(file){
   var fr = new FileReader();
-  var amount = 1024 * 1024; //it has to be a multiple of 512 bits
+  var amount = 1024; //it has to be a multiple of 512 bits (a multiple of 64 bytes)
   
   var size = file.size;
   
@@ -48,16 +48,16 @@ function loadChunk(file){
     }
     if(file.size > position) loadChunk(file);
   }
-  fr.readAsArrayBuffer(file.webkitSlice(position, amount));
+  fr.readAsArrayBuffer(file.webkitSlice(position, position+amount));
   position += amount;
 }
 
  
 function endian_swap(x){
   return (
-    (x>>24) | 
+    (x>>>24) | 
     ((x<<8) & 0x00FF0000) |
-    ((x>>8) & 0x0000FF00) |
+    ((x>>>8) & 0x0000FF00) |
     (x<<24)
   )
 }
@@ -123,21 +123,24 @@ function sha_transform(){
   H[3] += Z[4]
   H[4] += Z[5]
   
-  console.log(toHexStr(H[0]) + toHexStr(H[1]) + toHexStr(H[2]) + toHexStr(H[3]) + toHexStr(H[4]));
+  //console.log(toHexStr(H[0]) + toHexStr(H[1]) + toHexStr(H[2]) + toHexStr(H[3]) + toHexStr(H[4]));
 }
 
 
 //TODO: benchmark to see which is faster
-function _f1(x,y,z){return (x & y) ^ (~x & z)}
-function _f3(x,y,z){return (x & y) ^ (x & z) ^ (y & z)}
+function f1(x,y,z){return (x & y) ^ (~x & z)}
+function f3(x,y,z){return (x & y) ^ (x & z) ^ (y & z)}
 
-function f1(x,y,z){ return  (z ^ (x & (y ^ z)))	}
+function $f1(x,y,z){ return  (z ^ (x & (y ^ z)))	}
+function $f3(x,y,z){return ((x & y) + (z & (x ^ y)))}
+
+
 function f2(x,y,z){return (x ^ y ^ z)	}
-function f3(x,y,z){return ((x & y) + (z & (x ^ y)))}
+
 
 rol32 = function(x, n) {
-  return (x<<n) | (x>>>(32-n));
-  //(x<<n)|(x>>(32-n));
+  //return (x<<n) | (x>>>(32-n));
+  return (x<<n)|(x>>>(32-n));
 }
 
 toHexStr = function(n) {
