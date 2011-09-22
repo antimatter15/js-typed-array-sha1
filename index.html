@@ -1,50 +1,161 @@
-<progress style="width:100%;margin-bottom:5px;" id="progress" value=0></progress>
-<input type="file" onchange="selected(this.files)">
-<span id="matrix" style="font-family: monospace"></span>
-
-<script>
-var p = 0;
-function fileSlice(file, start, length){
-  var end = length + start;
-  if(file.mozSlice){
-    return file.mozSlice(start, end);
-  }else if(file.webkitSlice){
-    return file.webkitSlice(start, end);
-  }
-}
-function selected(files){
-  var file = files[0];
-  var size = file.size;
-  var realsize = Math.ceil((size/4 + 3)/16) * 16 * 4;
-  worker = new Worker('worker.js');
-  lasttime = +new Date;
-  lastprocessed = 0;
-  worker.onmessage = function(e){
-    if(e.data.action == 'requestChunk'){
-      var fr = new FileReader();
-      fr.onload = function(){
-        worker.postMessage(fr.result);
-      }
-      fr.readAsArrayBuffer(fileSlice(file, e.data.position, e.data.amount));
-    }else{
-      var time = +new Date;
-      var pct = e.data.processed/realsize;
-      document.getElementById('progress').value = pct;
-      document.getElementById('matrix').innerHTML = 'SHA1: ' + e.data.hash + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"+
-        e.data.processed+'/'+realsize+'&nbsp;&nbsp;&nbsp;&nbsp;'+
-        (pct*100).toFixed(2)+'%&nbsp;&nbsp;&nbsp;&nbsp;'+ 
-        (((e.data.processed - lastprocessed)/((time - lasttime)/1000))/1024/1024).toFixed(2) + 'MB/s';
-      if(p++ % 14 == 0){
-        lasttime = time;
-        lastprocessed = e.data.processed;
-      }
+<!doctype html>
+<html>
+	<head>
+		<title>SHA1 Checksum Calculator</title>
+		<style>
+		body {
+			background-color: #ADADAD;
+			font-family: sans-serif;
+			color:white;
+		}
+		
+		#floater {
+		
+			position: absolute;
+			top: 40%;
+			left: 50%;
     }
-  }
-  worker.onerror = function(e){
-    console.log(e);
-  }
-  worker.postMessage({file: files[0], size: size});
-}
+		#center {
+			color: black;
+			margin: -150px 0 0 -300px;
+			width: 600px;
+			height: 250px;
+			position: absolute;
+			z-index: 99;
+			padding-right: 15px;
+			padding-left: 15px;
+			-webkit-box-sizing: border-box;
+			box-sizing: border-box;
+			opacity: 1;
+			background-image: -webkit-linear-gradient(273deg, rgb(252, 252, 252), rgb(247, 247, 247) 3%, rgb(242, 242, 242) 12%, rgb(217, 217, 217) 90%, rgb(191, 191, 191)); 
+			background-image: -moz-linear-gradient(273deg, rgb(252, 252, 252), rgb(247, 247, 247) 3%, rgb(242, 242, 242) 12%, rgb(217, 217, 217) 90%, rgb(191, 191, 191)); 
+			background-attachment: initial; 
+			background-origin: initial; 
+			background-clip: initial; 
+			background-color: initial; 
+			-webkit-box-shadow: #A5A5A5 0px 0px 6px 6px; 
+			-moz-box-shadow: #A5A5A5 0px 0px 6px 6px; 
+			border-top-left-radius: 30px 30px; 
+			border-top-right-radius: 0 0; 
+			border-bottom-right-radius: 30px 30px; 
+			border-bottom-left-radius: 0 0;
+			background-position: initial initial; 
+			background-repeat: initial initial; 
+		}
+    
+    #value {
+			color: black;
+			margin: -150px 0 0 -300px;
+			top: 230px;
+			left: 42px;
+			width: 510px;
+			padding-bottom: 10px;
+			position: absolute;
+			z-index: 99;
+			padding-right: 15px;
+			padding-left: 15px;
+			-webkit-box-sizing: border-box;
+			box-sizing: border-box;
+			opacity: 1;
+			background-image: -webkit-linear-gradient(273deg, rgb(252, 252, 252), rgb(247, 247, 247) 3%, rgb(242, 242, 242) 12%, rgb(217, 217, 217) 90%, rgb(191, 191, 191)); 
+			background-image: -moz-linear-gradient(273deg, rgb(252, 252, 252), rgb(247, 247, 247) 3%, rgb(242, 242, 242) 12%, rgb(217, 217, 217) 90%, rgb(191, 191, 191)); 
+			background-attachment: initial; 
+			background-origin: initial; 
+			background-clip: initial; 
+			background-color: initial; 
+			-webkit-box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 6px 6px; 
+			-moz-box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 6px 6px; 
+      font-family: monospace;
+			border-bottom-right-radius: 10px 10px; 
+			border-bottom-left-radius: 10px 10px;
+			background-position: initial initial; 
+			background-repeat: initial initial; 
+			padding-top: 30px;
+			font-size: 20px;
+		}
+    
+		</style>
+	</head>
+	<body>
+		<script>
+      var p = 0;
+      function fileSlice(file, start, length){
+        var end = length + start;
+        if(file.mozSlice){
+          return file.mozSlice(start, end);
+        }else if(file.webkitSlice){
+          return file.webkitSlice(start, end);
+        }
+      }
 
+      function selected(file){
+        var size = file.size;
+        var realsize = Math.ceil((size/4 + 3)/16) * 16 * 4;
+        worker = new Worker('worker.js');
+        lasttime = +new Date;
+        lastprocessed = 0;
+        worker.onmessage = function(e){
+          if(e.data.action == 'requestChunk'){
+            var fr = new FileReader();
+            fr.onload = function(){
+              worker.postMessage(fr.result);
+            }
+            fr.readAsArrayBuffer(fileSlice(file, e.data.position, e.data.amount));
+          }else{
+            var time = +new Date;
+            var pct = e.data.processed/realsize;
+            document.getElementById('progress').value = pct;
+            document.getElementById('value').style.display = '';
+            document.getElementById('value').innerHTML = e.data.hash;
+            document.getElementById('pct').innerHTML = (pct*100).toFixed(2)+'%';
+            document.getElementById('speed').innerHTML = (((e.data.processed - lastprocessed)/((time - lasttime)/1000))/1024/1024).toFixed(2) + 'MB/s';
+            //e.data.processed+'/'+realsize+' '+
+            if(p++ % 14 == 0){
+              lasttime = time;
+              lastprocessed = e.data.processed;
+            }
+          }
+        }
+        worker.onerror = function(e){
+          console.log(e);
+        }
+        worker.postMessage({file: file, size: size});
+      }
+			//do html5 drag and drop
+			document.addEventListener("dragenter", function(e){e.preventDefault();e.stopPropagation()}, false);
+			document.addEventListener("dragexit", function(e){e.preventDefault();e.stopPropagation()}, false);
+			document.addEventListener("dragover", function(e){e.preventDefault();e.stopPropagation()}, false);
+			document.addEventListener("drop", function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				var files = e.dataTransfer.files;
+				if(files.length > 0) selected(files);
+			}, false);
 
-</script>
+		</script>
+		<div id="floater">
+		<div id="value" style='display:none'>
+		  3da541559918a808c2402bba5012f6c60b27661c
+		</div>
+		<div id="center">
+
+			<h1 >SHA1 <span style="color:gray">Checksum</span> Calculator</h1>
+			<p>
+				This is a simple <b>SHA1 checksumming utility</b>, written in <b>Javascript</b> using the File API, WebGL Typed Arrays, and Web Workers. It's pretty fast and can handle files <b>several gigabytes</b> large.
+			</p>
+			<p>
+				To begin, select <b>a file</b> (or <b>drag it here</b>).
+			</p>
+			<div style="float:right">
+			  <span id="speed"  style='padding-right:10px;'></span>
+			  <span id="pct" style='font-weight:bold'></span>
+			</div>
+			<p>
+				<input type="file" onchange="selected(this.files[0])">
+			</p>
+			<progress id="progress" style="width:570px;position:absolute;bottom:12px;" value=0></progress>
+		</div>
+		</div>
+	</body>
+</html>
+
