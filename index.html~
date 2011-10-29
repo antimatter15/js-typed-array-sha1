@@ -15,16 +15,15 @@
 			color:#EDFAFF;
 		}
 		#floater {
-			position: absolute;
 			top: 40%;
 			left: 50%;
+			position:absolute;
     }
 		#center {
+			display: inline-block;
 			color: black;
 			margin: -150px 0 0 -300px;
 			width: 600px;
-			height: 250px;
-			position: absolute;
 			z-index: 99;
 			padding-right: 15px;
 			padding-left: 15px;
@@ -49,12 +48,11 @@
     
     #value {
 			color: black;
-			margin: -150px 0 0 -300px;
+			margin: 0 0 0 -260px;
 			top: 230px;
 			left: 42px;
 			width: 510px;
 			padding-bottom: 10px;
-			position: absolute;
 			z-index: 99;
 			padding-right: 15px;
 			padding-left: 15px;
@@ -74,7 +72,7 @@
 			border-bottom-left-radius: 10px 10px;
 			background-position: initial initial; 
 			background-repeat: initial initial; 
-			padding-top: 30px;
+			padding-top: 15px;
 			font-size: 20px;
 		}
     
@@ -82,7 +80,7 @@
 	</head>
 	<body>
 		<script>
-      var p = 0;
+      var p = 0, worker;
       function fileSlice(file, start, length){
         var end = length + start;
         if(file.mozSlice){
@@ -93,6 +91,7 @@
       }
 
       function selected(file){
+        if(worker) worker.terminate();
         var size = file.size;
         var realsize = Math.ceil((size/4 + 3)/16) * 16 * 4;
         worker = new Worker('worker.js');
@@ -139,9 +138,6 @@
 
 		</script>
 		<div id="floater">
-		<div id="value" style='display:none'>
-		  3da541559918a808c2402bba5012f6c60b27661c
-		</div>
 		<div id="center">
 
 			<h1 >SHA1 <span style="color:gray">Checksum</span> Calculator</h1>
@@ -160,7 +156,11 @@
 				<input type="file" onchange="selected(this.files[0])">
 			</p>
 			</div>
-			<progress id="progress" style="width:570px;position:absolute;bottom:12px;display:none" value=0></progress>
+			<progress id="progress" style="width:570px;margin-bottom:12px;display:none" value=0></progress>
+		</div>
+		
+		<div id="value">
+		  3da541559918a808c2402bba5012f6c60b27661c
 		</div>
 		</div>
 		<footer style="position: absolute; bottom: 0; width: auto;padding: 20px;">
@@ -194,4 +194,6 @@
     </script>
 	</body>
 </html>
+
+
 

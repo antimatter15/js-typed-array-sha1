@@ -80,7 +80,7 @@
 	</head>
 	<body>
 		<script>
-      var p = 0;
+      var p = 0, worker;
       function fileSlice(file, start, length){
         var end = length + start;
         if(file.mozSlice){
@@ -91,6 +91,7 @@
       }
 
       function selected(file){
+        if(worker) worker.terminate();
         var size = file.size;
         var realsize = Math.ceil((size/4 + 3)/16) * 16 * 4;
         worker = new Worker('worker.js');
@@ -163,7 +164,7 @@
 		</div>
 		</div>
 		<footer style="position: absolute; bottom: 0; width: auto;padding: 20px;">
-		<b>Hello.</b> This app was made by <a href="http://twitter.com/antimatter15">@antimatter15</a> (or <a href="https://plus.google.com/116347431032639424492/about">Google+</a>). Read my <a href="http://antimatter15.com/wp/">Blog</a> for some other neat stuff. See how it works on <a href="https://github.com/antimatter15/js-typed-array-sha1">Github</a>.
+		<b>Hello.</b> This app was made by <a href="http://twitter.com/antimatter15">@antimatter15</a> (or <a href="https://plus.google.com/116347431032639424492/about">Google+</a>). Read my <a href="http://antimatter15.com/wp/">blog</a> for some other neat stuff. See how it works on <a href="https://github.com/antimatter15/js-typed-array-sha1">Github</a>.
 		</footer>
 		<script>
 		  (function(){
